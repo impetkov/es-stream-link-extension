@@ -1,0 +1,25 @@
+{
+	"manifest_version": 2,
+	"name": "ES Correlation Extension",
+	"version": "0.1",
+	"content_security_policy": "script-src 'self' 'sha256-5Ix1pFDPkUX6It7bua+iM8ml5tYN2iipozvGWdNl71M='; object-src 'self'",
+	"content_scripts": [
+		{
+			"matches": [
+				"<all_urls>"
+			],
+			"js": ["jquery-1.6.4.min.js", "content.js"],
+            "run_at":    "document_idle"
+		}
+	],
+	"browser_action": {
+		"default_icon": "icon.png",
+        "default_popup": "popup.html"
+    },
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "permissions": [
+        "tabs"
+    ]
+}
