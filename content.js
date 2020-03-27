@@ -1,8 +1,10 @@
 async function linkCustomerCover(){
     let customerCoverElement = document.getElementsByTagName('pre')[0];
-    while(!customerCoverElement){
+    let attemptCounter = 0;
+    while(!customerCoverElement && attemptCounter < 5){
         await new Promise(r => setTimeout(r, 1000));
         customerCoverElement = document.getElementsByTagName('pre')[0];
+        attemptCounter++;
     }
     
     if(!customerCoverElement){
@@ -29,9 +31,11 @@ async function linkCustomerCover(){
 
 async function linkCorrelation(){
     let correlationElement = document.getElementsByTagName('pre')[1];
-    while(!correlationElement){
+    let attemptCounter = 0;
+    while(!correlationElement && attemptCounter < 5){
         await new Promise(r => setTimeout(r, 1000));
         correlationElement = document.getElementsByTagName('pre')[1];
+        attemptCounter++;
     }
     
     if(!correlationElement){
