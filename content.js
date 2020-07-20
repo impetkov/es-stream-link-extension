@@ -3,12 +3,19 @@ const CUSTOMER_COVER_ID = 'customercoverid';
 const RISK_VARIATION_ID = 'riskvariationid';
 const QUOTE_ID = 'quoteid';
 const CORRELATION_ID = 'correlationid';
+const RISK = '"risk"';
+const COMPRESSED_RISK_STARTING_SEQUENCE = '^@v1^';
 
 function hasAlreadyBeenLinked(parent, child){
     const innerHTML = parent.innerHTML.toLocaleLowerCase();
     const childPosition = innerHTML.search(child);
     
     return innerHTML.substring(childPosition, childPosition + 20).indexOf('<') > 0;
+}
+
+function hasAlreadyBeenDecompressed(risk, child){
+    
+    return risk.substring(0, risk.length).indexOf(COMPRESSED_RISK_STARTING_SEQUENCE) < 0;
 }
 
 async function getContainingElement(index, attempts = 3){
@@ -23,7 +30,8 @@ async function getContainingElement(index, attempts = 3){
     return containingElement;
 }
 
-const getText = element => element.innerText.toLocaleLowerCase();
+const getText = element => element.innerText;
+const getLowerCaseText = element => element.innerText.toLocaleLowerCase();
 const getHTML = element => element.innerHTML.toLocaleLowerCase();
 
 const findId = (text, startingIndex, characterOffset) =>
@@ -43,7 +51,7 @@ async function linkCustomerCover(){
         return;
     }
     
-    const containingElementText = getText(customerCoverElement);
+    const containingElementText = getLowerCaseText(customerCoverElement);
     const customerCoverIdPositionInText = containingElementText.search(CUSTOMER_COVER_ID);
 
     if(customerCoverIdPositionInText < 0){
@@ -66,7 +74,7 @@ async function linkQuoteRating(){
         return;
     }
 
-    const containingElementText = getText(riskVariationElement);
+    const containingElementText = getLowerCaseText(riskVariationElement);
     const riskVariationIdPositionInText = containingElementText.search(RISK_VARIATION_ID);
 
     if(riskVariationIdPositionInText < 0){
@@ -89,7 +97,7 @@ async function linkRiskVariations(){
         return;
     }
 
-    const containingElementText = getText(quoteElement);
+    const containingElementText = getLowerCaseText(quoteElement);
     const quoteIdPositionInText = containingElementText.search(QUOTE_ID);
 
     if(quoteIdPositionInText < 0){
@@ -112,7 +120,7 @@ async function linkCorrelation(){
         return;
     }
     
-    const containingElementText = getText(correlationElement);
+    const containingElementText = getLowerCaseText(correlationElement);
     const correlationIdPositionInText = containingElementText.search(CORRELATION_ID);
 
     if(correlationIdPositionInText < 0){
@@ -128,6 +136,49 @@ async function linkCorrelation(){
     linkify(correlationElement, correlationId, correlationIdPositionInHTML, 17, 'correlation-');
 }
 
+function uncompressRisk(risk){
+    risk = risk.substring(5);
+    const compressedRisk = atob(risk);
+
+    const charData = compressedRisk.split('').map(function(x){return x.charCodeAt(0);});
+
+    const binData = new Uint8Array(charData);
+
+    const data = pako.inflate(binData);
+
+    const uncompressedRisk = String.fromCharCode.apply(null, new Uint16Array(data));
+
+    return uncompressedRisk;
+}
+
+async function decompressRisk() {
+    const riskElement = await getContainingElement(0);
+    
+    if(!riskElement){
+        return;
+    }
+    
+    const containingElementText = getText(riskElement);
+    const riskStartPositionInText = containingElementText.search(RISK);
+
+    if(riskStartPositionInText < 0 || riskElement.innerHTML.search('btnDecompressRisk') > 0){
+        return;
+    }
+
+    var json = JSON.parse(containingElementText);
+    
+
+    if(hasAlreadyBeenDecompressed(json.risk, RISK)){
+        return;
+    }
+
+    const uncompressedRisk = uncompressRisk(json.risk);
+
+    const eventData = JSON.stringify(json, null, 4);
+    const formattedRisk = JSON.stringify(uncompressedRisk, null, 4).replace("'", "");
+    riskElement.innerHTML = `${eventData}<br/><button id='btnDecompressRisk' onclick='const riskTextArea = getElementById("decompressedRiskTextArea"); if(riskTextArea.style.display === "block") {riskTextArea.style.display = "none";} else {riskTextArea.style.display = "block";}'>Decompress risk</button><br/><div id="decompressedRiskTextArea" style="display: none;"><textarea id="decompressedRisk">${formattedRisk}</textarea><button id="btnCopyRisk" onclick='const riskArea = getElementById("decompressedRisk"); console.log(riskArea); riskArea.select(); document.execCommand("copy");'>Copy risk to clipboard</button></div>`;
+}
+
 chrome.runtime.onMessage.addListener(
     function(request, sender, sendResponse) {
         if(request.message === "go_to_policy_stream") {
@@ -138,6 +189,9 @@ chrome.runtime.onMessage.addListener(
         }
         if(request.message === "go_to_risk_variations_stream") {
             linkRiskVariations();
+        }
+        if(request.message === "decompress_risk") {
+            decompressRisk();
         }
         if(request.message === "go_to_correlation_stream" ) {
             linkCorrelation();
