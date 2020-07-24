@@ -176,7 +176,7 @@ async function decompressRisk() {
 
     const eventData = JSON.stringify(json, null, 4);
     const formattedRisk = JSON.stringify(uncompressedRisk, null, 4).replace("'", "");
-    riskElement.innerHTML = `${eventData}<br/><button id='btnDecompressRisk' onclick='const riskTextArea = getElementById("decompressedRiskTextArea"); if(riskTextArea.style.display === "block") {riskTextArea.style.display = "none";} else {riskTextArea.style.display = "block";}'>Decompress risk</button><br/><div id="decompressedRiskTextArea" style="display: none;"><textarea id="decompressedRisk">${formattedRisk}</textarea><button id="btnCopyRisk" onclick='const riskArea = getElementById("decompressedRisk"); console.log(riskArea); riskArea.select(); document.execCommand("copy");'>Copy risk to clipboard</button></div>`;
+    riskElement.innerHTML = `${eventData}<br/><button id='btnDecompressRisk' onclick='const riskTextArea = getElementById("decompressedRiskTextArea"); if(riskTextArea.style.display === "block") {riskTextArea.style.display = "none";} else {riskTextArea.style.display = "block";}'>Decompress risk</button><br/><div id="decompressedRiskTextArea" style="display: none;"><textarea id="decompressedRisk" style="max-width: 1500px; min-height: 300px; font-family: monospace;">${formattedRisk}</textarea><button id="btnCopyRisk" onclick='const riskArea = getElementById("decompressedRisk"); riskArea.select(); document.execCommand("copy");'>Copy risk to clipboard</button></div>`;
 }
 
 chrome.runtime.onMessage.addListener(
