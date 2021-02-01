@@ -41,7 +41,7 @@ const linkify = (containingElement, idToLinkify, position, offset, stream) => {
     const htmlPrior = containingElement.innerHTML.substring(0, position + offset);
     const htmlAfter = containingElement.innerHTML.substring(position + offset + GUID_LENGTH);
 
-    containingElement.innerHTML = `${htmlPrior}<a target="_blank" href="index.html#/streams/${stream}${idToLinkify}">${idToLinkify}</a>${htmlAfter}`
+    containingElement.innerHTML = `${htmlPrior}<a target="_blank" href="index.html#/streams/${stream}${idToLinkify}/0/forward/100">${idToLinkify}</a>${htmlAfter}`
 }
 
 async function linkCustomerCover(){
