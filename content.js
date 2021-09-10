@@ -4,6 +4,7 @@ const RISK_VARIATION_ID = 'riskvariationid';
 const QUOTE_ID = 'quoteid';
 const CORRELATION_ID = 'correlationid';
 const RISK = '"risk"';
+const INVITED_RISK = '"invitedRisk"';
 const COMPRESSED_RISK_STARTING_SEQUENCE = '^@v1^';
 
 function hasAlreadyBeenLinked(parent, child){
@@ -13,8 +14,11 @@ function hasAlreadyBeenLinked(parent, child){
     return innerHTML.substring(childPosition, childPosition + 20).indexOf('<') > 0;
 }
 
-function hasAlreadyBeenDecompressed(risk, child){
-    
+function hasAlreadyBeenDecompressed(risk){
+    if(!risk){
+        return true;
+    }
+
     return risk.substring(0, risk.length).indexOf(COMPRESSED_RISK_STARTING_SEQUENCE) < 0;
 }
 
@@ -151,6 +155,19 @@ function uncompressRisk(risk){
     return uncompressedRisk;
 }
 
+function riskElementDoesNotContainRisk(riskElement, containingElementText){
+    let riskStartPositionInText = containingElementText.search(RISK);
+    if(riskStartPositionInText < 0 || riskElement.innerHTML.search('btnDecompressRisk') > 0){
+        riskStartPositionInText = containingElementText.search(INVITED_RISK);
+
+        if(riskStartPositionInText < 0 || riskElement.innerHTML.search('btnDecompressRisk') > 0){
+            return true;
+        }
+    }
+
+    return false;
+}
+
 async function decompressRisk() {
     const riskElement = await getContainingElement(0);
     
@@ -159,24 +176,41 @@ async function decompressRisk() {
     }
     
     const containingElementText = getText(riskElement);
-    const riskStartPositionInText = containingElementText.search(RISK);
+    
 
-    if(riskStartPositionInText < 0 || riskElement.innerHTML.search('btnDecompressRisk') > 0){
+    if(riskElementDoesNotContainRisk(riskElement, containingElementText)){
         return;
     }
 
     var json = JSON.parse(containingElementText);
     
+    let hasRiskBeenDecompessed, hasInvitedRiskBeenDecompressed = false;
+    if(hasAlreadyBeenDecompressed(json.risk)) {
+        hasRiskBeenDecompessed = true;
+    }
+    
+    if(hasAlreadyBeenDecompressed(json.invitedRisk)){
+        hasInvitedRiskBeenDecompressed = true;
+    }
 
-    if(hasAlreadyBeenDecompressed(json.risk, RISK)){
+    if(hasRiskBeenDecompessed == hasInvitedRiskBeenDecompressed){
         return;
     }
 
-    const uncompressedRisk = uncompressRisk(json.risk);
+    let uncompressedRisk, buttonLabel = '';
+    if(!hasRiskBeenDecompessed){
+        uncompressedRisk = uncompressRisk(json.risk);
+        buttonLabel = 'Decompress risk';
+    }
+    
+    if(!hasInvitedRiskBeenDecompressed){
+        uncompressedRisk = uncompressRisk(json.invitedRisk);
+        buttonLabel = 'Decompress invited risk';
+    }
 
     const eventData = JSON.stringify(json, null, 4);
     const formattedRisk = JSON.stringify(uncompressedRisk, null, 4).replace("'", "");
-    riskElement.innerHTML = `${eventData}<br/><button id='btnDecompressRisk' onclick='const riskTextArea = getElementById("decompressedRiskTextArea"); if(riskTextArea.style.display === "block") {riskTextArea.style.display = "none";} else {riskTextArea.style.display = "block";}'>Decompress risk</button><br/><div id="decompressedRiskTextArea" style="display: none;"><textarea id="decompressedRisk" style="max-width: 1500px; min-height: 300px; font-family: monospace;">${formattedRisk}</textarea><button id="btnCopyRisk" onclick='const riskArea = getElementById("decompressedRisk"); riskArea.select(); document.execCommand("copy");'>Copy risk to clipboard</button></div>`;
+    riskElement.innerHTML = `${eventData}<br/><button id='btnDecompressRisk' onclick='const riskTextArea = getElementById("decompressedRiskTextArea"); if(riskTextArea.style.display === "block") {riskTextArea.style.display = "none";} else {riskTextArea.style.display = "block";}'>${buttonLabel}</button><br/><div id="decompressedRiskTextArea" style="display: none;"><textarea id="decompressedRisk" style="max-width: 1500px; min-height: 300px; font-family: monospace;">${formattedRisk}</textarea><button id="btnCopyRisk" onclick='const riskArea = getElementById("decompressedRisk"); riskArea.select(); document.execCommand("copy");'>Copy risk to clipboard</button></div>`;
 }
 
 chrome.runtime.onMessage.addListener(
